@@ -54,7 +54,6 @@ export default {
     return {
       mytaskid: null,
       tasks: null,
-
       intervaltask: null,
     };
   },
@@ -65,13 +64,18 @@ export default {
         this.$refs.unityvue.message(
           "MonoSingletionRoot",
           "LoadScene",
-          role.description
+          parseInt(role.id)
         );
       }
       //
     });
+
   },
   created() {
+    window["fraction"] = (source) => {
+      console.log(source)
+    }
+
     window.HandCap = (txt) => {
       alert(txt);
     };
@@ -106,6 +110,7 @@ export default {
     },
     async getMTask() {
       let obj = await getMyTask();
+      console.log(obj)
       if (obj.data && obj.data.length > 0) {
         this.tasks = obj.data[0];
         this.sendTaskToUnity()
@@ -144,11 +149,16 @@ export default {
     //如何发送
     async sendTaskToUnity() {
       let task = this.tasks;
+      console.log(task)
+      let send;
+      if(task.checkname == "道岔故障（道岔挤岔报警）的应急处理") {
+        send = "道岔故障";
+      }
       if (task) {
         this.$refs.unityvue.message(
           "MonoSingletionRoot",
-          "ATSReceive",
-          task.checkname
+          "ReceiveTasks",
+          send
         );
       }
     },

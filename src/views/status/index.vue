@@ -6,12 +6,21 @@
         @click="loginthis(item)"
         v-for="item of stsdatas"
         :key="item.id"
-        :type="item.status ? 'success' : 'default'"
+        :type="
+          item.status ? (item.status == 1 ? 'success' : 'primary') : 'default'
+        "
         >{{ item.description }}</el-button
       >
-
+      <br /><br /><br />
+      <span style="margin-right:8px;"><span class="notlog"></span>未登录</span>&nbsp;
+      <span style="margin-right:8px;"><span class="userlog"></span>用户登录</span>&nbsp;
+      <span><span class="complog"></span>电脑登录</span>
       <br /><br /><br /><br /><br />
       <div v-if="!runningtaskes || runningtaskes.length <= 0">
+        <span v-if="isallready" style="margin-right:10px">
+          <el-radio v-model="radio" label="1">实训</el-radio>
+          <el-radio v-model="radio" label="2">考核</el-radio>
+        </span>
         <el-button
           v-if="isallready"
           type="primary"
@@ -86,13 +95,13 @@ import {
   alltasks,
   sendTask,
   getRnningTask,
-  getLastFinishTask,
+  getLastFinishTask
 } from "@/api/func";
 
 export default {
   name: "Dashboard",
   computed: {
-    ...mapGetters(["name"]),
+    ...mapGetters(["name"])
   },
   data() {
     return {
@@ -108,6 +117,8 @@ export default {
 
       isallready: false,
       intervalData: null,
+
+      radio: "1"
     };
   },
   methods: {
@@ -123,30 +134,50 @@ export default {
       }
       let isready = true;
       for (let r of roles.data) {
-        r.status = tmpstatus[r.id] ? true : false;
+        //存储为三个状态：0为未登录，1为用户登录，2为电脑登录
+        // console.log(tmpstatus[r.id])
+        r.status = tmpstatus[r.id]
+          ? tmpstatus[r.id].logintype == "userlogin"
+            ? 1
+            : 2
+          : 0;
         datas.push(r);
-        if (r.status != true) {
+        if (r.status == 0) {
           isready = false;
         }
       }
       this.isallready = isready;
       this.stsdatas = datas;
+      // console.log(this.stsdatas)
     },
     async inittasks() {
       let tasks = await alltasks();
       this.tasks = tasks.data;
     },
     loginthis(item) {
+      console.log(item);
       if (!item.status) {
         this.$confirm("确定以电脑代替该角色？", "提示", {
           confirmButtonText: "确定",
           cancelButtonText: "取消",
-          type: "warning",
+          type: "warning"
         })
           .then(async () => {
             await computerlogin(item.id);
             this.$message({ type: "success", message: "操作成功!" });
-            item.status = true;
+            item.status = 2;
+          })
+          .catch(() => {});
+      } else if (item.status == 2) {
+        this.$confirm("确认退出电脑代替该角色？", "提示", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        })
+          .then(async () => {
+            // await computerlogin(item.id);
+            // this.$message({ type: "success", message: "操作成功!" });
+            // item.status = 2;
           })
           .catch(() => {});
       }
@@ -163,10 +194,12 @@ export default {
     },
     async confirmSendTask() {
       if (this.choosetask) {
+        console.log(this.choosetask)
         this.sending = true;
         await sendTask(this.choosetask);
         this.sending = false;
         this.dialogVisible = false;
+        //下发任务，传过去实训还是考核this.radio;
         this.$message({ type: "success", message: "任务下发成功!" });
         this.choosetask = null;
       } else {
@@ -178,7 +211,7 @@ export default {
         return "success-row";
       }
       return "";
-    },
+    }
   },
   mounted() {
     this.initInfo();
@@ -198,7 +231,7 @@ export default {
     if (this.intervalData) {
       clearInterval(this.intervalData);
     }
-  },
+  }
 };
 </script>
 <style lang="scss">
@@ -216,6 +249,27 @@ export default {
 .container-status {
   text-align: center;
   padding: 20px;
+  .notlog {
+    border: 1px solid #ccc;
+    width: 20px;
+    height: 12px;
+    display: inline-block;
+    border-radius: 2px;
+  }
+  .userlog {
+    width: 20px;
+    height: 12px;
+    display: inline-block;
+    border-radius: 2px;
+    background: #5daf34;
+  }
+  .complog {
+    width: 20px;
+    height: 12px;
+    display: inline-block;
+    border-radius: 2px;
+    background: #3a8ee6;
+  }
 }
 .line-task {
   margin: 5px 0;
