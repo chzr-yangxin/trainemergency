@@ -7,11 +7,12 @@
         v-for="item of stsdatas"
         :key="item.id"
         :type="item.status ? 'success' : 'default'"
-        >{{ item.description }}</el-button
+        >{{ item.description }}
+        {{ item.logintype == "computerlogin" ? "（电脑）" : "" }}</el-button
       >
 
       <br /><br /><br /><br /><br />
-      <div v-if="!runningtaskes || runningtaskes.length <= 0">
+      <div v-if="!runningtaskes">
         <el-button
           v-if="isallready"
           type="primary"
@@ -21,20 +22,9 @@
         >
       </div>
 
-      <div class="curtask" v-if="runningtaskes && runningtaskes.length > 0">
-        <h3>正在执行的任务：《{{ runningtaskes[0].checkname }}》</h3>
-        <el-table
-          border
-          :data="runningtaskes"
-          style="width: 100%"
-          :row-class-name="tableRowClassName"
-        >
-          <el-table-column prop="rolename" label="角色"> </el-table-column>
-          <el-table-column prop="usercode" label="工号"> </el-table-column>
-          <el-table-column prop="nickname" label="姓名"> </el-table-column>
-          <el-table-column prop="score" label="成绩"> </el-table-column>
-          <el-table-column prop="finish" label="是否完成"> </el-table-column>
-        </el-table>
+      <div class="curtask" v-if="runningtaskes">
+        <h3>正在执行的任务：《{{ runningtaskes.taskname }}》</h3>
+        <el-progress :text-inside="true" :stroke-width="24" :percentage="runtaskper" status="success"></el-progress>
       </div>
     </div>
 
@@ -87,6 +77,7 @@ import {
   sendTask,
   getRnningTask,
   getLastFinishTask,
+  computerlogout
 } from "@/api/func";
 
 export default {
@@ -98,7 +89,8 @@ export default {
     return {
       stsdatas: [],
 
-      runningtaskes: [],
+      runningtaskes: null,
+      runtaskper: 0,
       lastfinishtaskes: [],
 
       dialogVisible: false,
@@ -124,6 +116,7 @@ export default {
       let isready = true;
       for (let r of roles.data) {
         r.status = tmpstatus[r.id] ? true : false;
+        r.logintype = r.status ? tmpstatus[r.id].logintype : "";
         datas.push(r);
         if (r.status != true) {
           isready = false;
@@ -147,6 +140,20 @@ export default {
             await computerlogin(item.id);
             this.$message({ type: "success", message: "操作成功!" });
             item.status = true;
+            item.logintype = 'computerlogin';
+          })
+          .catch(() => {});
+      } else if (item.logintype == "computerlogin") {
+        this.$confirm("确定退出这个电脑角色？", "提示", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning",
+        })
+          .then(async () => {
+            await computerlogout(item.id);
+            this.$message({ type: "success", message: "操作成功!" });
+            item.status = false;
+            item.logintype = '';
           })
           .catch(() => {});
       }
@@ -154,9 +161,13 @@ export default {
     async initTaskStatus() {
       let obj = await getRnningTask();
       this.runningtaskes = obj.data;
+      if(this.runningtaskes){
+        this.runtaskper = parseInt(this.runningtaskes.curstep / this.runningtaskes.tasksteps * 100)
+      }
       //////
-      let fobj = await getLastFinishTask();
-      this.lastfinishtaskes = fobj.data;
+      // let fobj = await getLastFinishTask();
+      // console.log(fobj);
+      //this.lastfinishtaskes = fobj.data;
     },
     showSendDialog() {
       this.dialogVisible = true;

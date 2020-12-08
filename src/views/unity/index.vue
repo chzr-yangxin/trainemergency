@@ -11,9 +11,13 @@
     <div class="my-buts">
       <span class="title">系统名称</span>
 
-      <span class="dealtask" v-if="tasks" @click="pftest"
-        >正在执行的任务：“{{ tasks.checkname }}”</span
-      >
+      <span class="dealtask" v-if="pritask">
+        <span>【{{pritask.taskname}}】</span><br/>
+        <el-button-group>
+          
+          <el-button v-for="item in steps" :key="item.step" size="mini" :type="item.tp" :disabled="!item.ismy" @click="dealTask(item)">{{ item.txt }}<em v-if="item.ismy">（点击接受任务）</em></el-button>
+        </el-button-group>
+      </span>
 
       <div class="username">
         <!-- <div class="my-tasks">
@@ -43,7 +47,7 @@
 <script>
 import { mapGetters } from "vuex";
 import Unity from "vue-unity-webgl";
-import { getMyTask, scoreTask } from "@/api/func";
+import { alltasks, getMyTask, scoreTask } from "@/api/func";
 
 export default {
   computed: {
@@ -53,7 +57,8 @@ export default {
   data() {
     return {
       mytaskid: null,
-      tasks: null,
+      steps: null,
+      pritask: null,
 
       intervaltask: null,
     };
@@ -106,13 +111,49 @@ export default {
     },
     async getMTask() {
       let obj = await getMyTask();
-      if (obj.data && obj.data.length > 0) {
-        this.tasks = obj.data[0];
-        this.sendTaskToUnity()
-        this.mytaskid = this.tasks.id
-      } else {
-        this.tasks = null;
+      console.log(obj);
+      if(obj.data && obj.data.task){
+        this.pritask = obj.data.task
+        let mysteps = obj.data.mysteps;
+        let allsteps = [];
+        for(let i=0;i<this.pritask.tasksteps;i++){
+          let ismy = false;
+          let mobj = null;
+          for(let m of mysteps){
+            if(m.taskstep == i){
+              ismy = true;
+              mobj = m;
+            }
+          }
+          let txt = '已完成';
+          let tp = 'success';
+          if(this.pritask.curstep == i){
+            txt = '进行中';
+            tp = 'primary';
+          }else if(this.pritask.curstep < i){
+            txt = '等待中';
+            tp = 'default';
+          }
+          allsteps.push({ step: i, ismy: ismy, curstep: this.pritask.curstep, txt: txt, tp: tp, data: mobj });
+        }
+        this.steps = allsteps;
       }
+      // if (obj.data && obj.data.length > 0) {
+      //   this.tasks = obj.data[0];
+      //   this.sendTaskToUnity()
+      //   this.mytaskid = this.tasks.id
+      // } else {
+      //   this.tasks = null;
+      // }
+    },
+    dealTask(item){
+      // 接受任务
+      if(item.data && item.curstep == item.step){
+        this.mytaskid = item.data.id;
+      }
+      // 测试
+      // this.mytaskid = '58cd1cff0d5745b92aa7fac479627fb6';
+      // this.pftest()
     },
     sendTest() {
       // this.$refs.unityvue.message(
@@ -129,15 +170,15 @@ export default {
       //   "尝试单扳实验"
       // );
     },
-    pftest(){
-      this.scoreTask(77)
+    pftest() {
+      this.scoreTask(77);
     },
     async scoreTask(score) {
       await scoreTask(this.mytaskid, score);
       this.$message({
         type: "success",
         message: "分数成功提交，您的分数是：" + score,
-        offset: 100
+        offset: 100,
       });
       this.tasks = null;
     },
@@ -153,8 +194,8 @@ export default {
       }
     },
     async logout() {
-      if(this.intervaltask){
-        clearInterval(this.intervaltask)
+      if (this.intervaltask) {
+        clearInterval(this.intervaltask);
       }
       await this.$store.dispatch("user/logout");
       this.$router.push(`/login?redirect=${this.$route.fullPath}`);
@@ -189,7 +230,9 @@ export default {
 .dealtask {
   font-size: 12px;
   color: #f60;
-  padding-top:20px;
+  padding-top: 6px;
+  flex: 1;
+  text-align: center;
 }
 .my-buts {
   position: absolute;

@@ -22,6 +22,14 @@ export function computerlogin(roleid) {
     })
 }
 
+export function computerlogout(roleid){
+    return request({
+        url: '/subway/computerlogout',
+        method: 'get',
+        params: {roleid}
+    })
+}
+
 export function alltasks() {
     return request({
         url: '/subway/task',
@@ -32,7 +40,8 @@ export function alltasks() {
 export function sendTask(taskid) {
     return request({
         url: '/subway/sendtask/' + taskid,
-        method: 'post'
+        method: 'post',
+        params: { tasktype: '实训' }
     })
 }
 
