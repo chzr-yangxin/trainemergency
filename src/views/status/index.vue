@@ -155,7 +155,7 @@ export default {
       this.tasks = tasks.data;
     },
     loginthis(item) {
-      console.log(item);
+      // console.log(item);
       if (!item.status) {
         this.$confirm("确定以电脑代替该角色？", "提示", {
           confirmButtonText: "确定",
@@ -194,7 +194,7 @@ export default {
     },
     async confirmSendTask() {
       if (this.choosetask) {
-        console.log(this.choosetask)
+        // console.log(this.choosetask)
         this.sending = true;
         await sendTask(this.choosetask);
         this.sending = false;
