@@ -11,9 +11,20 @@
     <div class="my-buts">
       <span class="title">系统名称</span>
 
-      <span class="dealtask" v-if="tasks" @click="pftest"
-        >正在执行的任务：“{{ tasks.checkname }}”</span
-      >
+      <span class="dealtask" v-if="pritask">
+        <span>【{{ pritask.taskname }}】</span><br />
+        <el-button-group>
+          <el-button
+            v-for="item in steps"
+            :key="item.step"
+            size="mini"
+            :type="item.tp"
+            :disabled="!item.ismy"
+            @click="dealTask(item)"
+            >{{ item.txt }}<em v-if="item.ismy">（点击接受任务）</em></el-button
+          >
+        </el-button-group>
+      </span>
 
       <div class="username">
         <!-- <div class="my-tasks">
@@ -43,23 +54,27 @@
 <script>
 import { mapGetters } from "vuex";
 import Unity from "vue-unity-webgl";
-import { getMyTask, scoreTask } from "@/api/func";
+import { alltasks, getMyTask, scoreTask } from "@/api/func";
 
 export default {
   computed: {
-    ...mapGetters(["user"]),
+    ...mapGetters(["user"])
   },
   components: { Unity },
   data() {
     return {
       mytaskid: null,
       tasks: null,
-      intervaltask: null,
+      steps: null,
+      pritask: null,
+
+      intervaltask: null
     };
   },
   mounted() {
     this.initUnity(() => {
       let role = this.user.role;
+      console.log(role);
       if (role) {
         this.$refs.unityvue.message(
           "MonoSingletionRoot",
@@ -69,17 +84,54 @@ export default {
       }
       //
     });
-
   },
   created() {
-    window["fraction"] = (source) => {
-      console.log(source)
-    }
+    window["fraction"] = source => {
+      console.log(source);
+    };
 
-    window.HandCap = (txt) => {
+    window["DutyStation"] = msg => {
+      console.log(msg);
+      console.log(this.tasks)
+      if (msg == "人民广场站6号道岔挤岔报警") {
+        this.$refs.unityvue.message(
+          "MonoSingletionRoot",
+          "ReceiveTasks",
+          "道岔故障"
+        );
+        // this.$refs.unityvue.message(
+        //   "MonoSingletionRoot",
+        //   "ReceiveTasks",
+        //   "上报道岔故障行调"
+        // );
+        this.scoreTask(100)
+      } else if (msg == "请求单扳实验") {
+        this.$refs.unityvue.message(
+          "MonoSingletionRoot",
+          "ReceiveTasks",
+          "请求单扳实验"
+        );
+      } else if (msg == "道岔正常") {
+        console.log('over')
+      }
+    };
+    window["RoadWatchman"] = msg => {
+      console.log(msg);
+    };
+    window["PassengerWatchman"] = msg => {
+      console.log(msg);
+    };
+    window["StationHall"] = msg => {
+      console.log(msg);
+    };
+    window["Over"] = () => {
+      //计分。或者重新开始
+    };
+
+    window.HandCap = txt => {
       alert(txt);
     };
-    window.BeatPhone = (txt) => {
+    window.BeatPhone = txt => {
       //// 分数清零
       alert("ok");
       alert(txt);
@@ -111,13 +163,73 @@ export default {
     async getMTask() {
       let obj = await getMyTask();
       // console.log(obj)
-      if (obj.data && obj.data.length > 0) {
-        this.tasks = obj.data[0];
-        this.sendTaskToUnity()
-        this.mytaskid = this.tasks.id
-      } else {
-        this.tasks = null;
+      // if (obj.data && obj.data.length > 0) {
+      //   this.tasks = obj.data[0];
+      //   this.sendTaskToUnity()
+      //   this.mytaskid = this.tasks.id
+      // } else {
+      //   this.tasks = null;
+      // console.log(obj);
+      if (obj.data && obj.data.task) {
+        this.tasks = obj.data;
+        console.log("--------------------------")
+        console.log(obj.data)
+        this.mytaskid = this.tasks.id;
+
+        this.pritask = obj.data.task;
+        let mysteps = obj.data.mysteps;
+        let allsteps = [];
+        for (let i = 0; i < this.pritask.tasksteps; i++) {
+          let ismy = false;
+          let mobj = null;
+          for (let m of mysteps) {
+            if (m.taskstep == i) {
+              ismy = true;
+              mobj = m;
+            }
+          }
+          let txt = "已完成";
+          let tp = "success";
+          if (this.pritask.curstep == i) {
+            txt = "进行中";
+            tp = "primary";
+          } else if (this.pritask.curstep < i) {
+            txt = "等待中";
+            tp = "default";
+          }
+          allsteps.push({
+            step: i,
+            ismy: ismy,
+            curstep: this.pritask.curstep,
+            txt: txt,
+            tp: tp,
+            data: mobj
+          });
+        }
+        this.steps = allsteps;
+        console.log(this.steps)
       }
+      // console.log(obj.data && obj.data.task)
+      // if (obj.data && obj.data.length > 0) {
+      //   this.tasks = obj.data[0];
+      //   this.sendTaskToUnity()
+      //   this.mytaskid = this.tasks.id
+      // } else {
+      //   this.tasks = null;
+      // }
+      // console.log(this.tasks)
+    },
+    dealTask(item) {
+      console.log(item);
+      // 接受任务
+      if (item.data && item.curstep == item.step) {
+        this.mytaskid = item.data.id;
+        console.log(this.mytaskid);
+        this.sendTaskToUnity();
+      }
+      // 测试
+      // this.mytaskid = '58cd1cff0d5745b92aa7fac479627fb6';
+      // this.pftest()
     },
     sendTest() {
       // this.$refs.unityvue.message(
@@ -134,8 +246,8 @@ export default {
       //   "尝试单扳实验"
       // );
     },
-    pftest(){
-      this.scoreTask(77)
+    pftest() {
+      this.scoreTask(77);
     },
     async scoreTask(score) {
       await scoreTask(this.mytaskid, score);
@@ -149,27 +261,24 @@ export default {
     //如何发送
     async sendTaskToUnity() {
       let task = this.tasks;
-      // console.log(task)
+      console.log(task);
       let send;
-      if(task.checkname == "道岔故障（道岔挤岔报警）的应急处理") {
+      if (task.task.taskname == "道岔故障（道岔挤岔报警）的应急处理") {
         send = "道岔故障";
       }
+      console.log(send);
       if (task) {
-        this.$refs.unityvue.message(
-          "MonoSingletionRoot",
-          "ReceiveTasks",
-          send
-        );
+        this.$refs.unityvue.message("MonoSingletionRoot", "ReceiveTasks", send);
       }
     },
     async logout() {
-      if(this.intervaltask){
-        clearInterval(this.intervaltask)
+      if (this.intervaltask) {
+        clearInterval(this.intervaltask);
       }
       await this.$store.dispatch("user/logout");
       this.$router.push(`/login?redirect=${this.$route.fullPath}`);
-    },
-  },
+    }
+  }
 };
 </script>
 <style lang="scss">
@@ -199,7 +308,9 @@ export default {
 .dealtask {
   font-size: 12px;
   color: #f60;
-  padding-top:20px;
+  padding-top: 6px;
+  flex: 1;
+  text-align: center;
 }
 .my-buts {
   position: absolute;

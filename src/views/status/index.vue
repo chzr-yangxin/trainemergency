@@ -9,11 +9,15 @@
         :type="
           item.status ? (item.status == 1 ? 'success' : 'primary') : 'default'
         "
-        >{{ item.description }}</el-button
+        >{{ item.description
+        }}{{ item.logintype == "computerlogin" ? "（电脑）" : "" }}</el-button
       >
       <br /><br /><br />
-      <span style="margin-right:8px;"><span class="notlog"></span>未登录</span>&nbsp;
-      <span style="margin-right:8px;"><span class="userlog"></span>用户登录</span>&nbsp;
+      <span style="margin-right:8px;"><span class="notlog"></span>未登录</span
+      >&nbsp;
+      <span style="margin-right:8px;"
+        ><span class="userlog"></span>用户登录</span
+      >&nbsp;
       <span><span class="complog"></span>电脑登录</span>
       <br /><br /><br /><br /><br />
       <div v-if="!runningtaskes || runningtaskes.length <= 0">
@@ -21,22 +25,35 @@
           <el-radio v-model="radio" label="1">实训</el-radio>
           <el-radio v-model="radio" label="2">考核</el-radio>
         </span>
-        <el-button
-          v-if="isallready"
-          type="primary"
-          round
-          @click="showSendDialog"
-          >下发任务</el-button
-        >
+        <div v-if="!runningtaskes">
+          <el-button
+            v-if="isallready"
+            type="primary"
+            round
+            @click="showSendDialog"
+            >下发任务</el-button
+          >
+        </div>
       </div>
-
-      <div class="curtask" v-if="runningtaskes && runningtaskes.length > 0">
-        <h3>正在执行的任务：《{{ runningtaskes[0].checkname }}》</h3>
+      <div class="curtask" v-if="runningtaskes">
+        <h3>正在执行的任务：《{{ runningtaskes.taskname }}》</h3>
+        <el-progress
+          :text-inside="true"
+          :stroke-width="24"
+          :percentage="runtaskper"
+          status="success"
+        ></el-progress>
+      </div>
+      <div
+        class="curtask oldtask"
+        v-if="lastfinishtaskes && lastfinishtaskes.length > 0"
+      >
+        <h3>上次执行完的任务：《{{ lastfinishtaskes[0].checkname }}》</h3>
         <el-table
           border
-          :data="runningtaskes"
+          :data="lastfinishtaskes"
           style="width: 100%"
-          :row-class-name="tableRowClassName"
+          row-class-name="warning-row"
         >
           <el-table-column prop="rolename" label="角色"> </el-table-column>
           <el-table-column prop="usercode" label="工号"> </el-table-column>
@@ -45,44 +62,25 @@
           <el-table-column prop="finish" label="是否完成"> </el-table-column>
         </el-table>
       </div>
-    </div>
-
-    <div
-      class="curtask oldtask"
-      v-if="lastfinishtaskes && lastfinishtaskes.length > 0"
-    >
-      <h3>上次执行完的任务：《{{ lastfinishtaskes[0].checkname }}》</h3>
-      <el-table
-        border
-        :data="lastfinishtaskes"
-        style="width: 100%"
-        row-class-name="warning-row"
-      >
-        <el-table-column prop="rolename" label="角色"> </el-table-column>
-        <el-table-column prop="usercode" label="工号"> </el-table-column>
-        <el-table-column prop="nickname" label="姓名"> </el-table-column>
-        <el-table-column prop="score" label="成绩"> </el-table-column>
-        <el-table-column prop="finish" label="是否完成"> </el-table-column>
-      </el-table>
-    </div>
-    <br /><br /><br /><br /><br />
-    <!-- -->
-    <el-dialog title="下发任务" :visible.sync="dialogVisible" width="50%">
-      <b>选择任务</b>
-      <div>
-        <span v-for="item of tasks" :key="item.id" class="line-task">
-          <el-radio v-model="choosetask" :label="item.id" border>{{
-            item.title
-          }}</el-radio
-          ><br />
+      <br /><br /><br /><br /><br />
+      <!-- -->
+      <el-dialog title="下发任务" :visible.sync="dialogVisible" width="50%">
+        <b>选择任务</b>
+        <div>
+          <span v-for="item of tasks" :key="item.id" class="line-task">
+            <el-radio v-model="choosetask" :label="item.id" border>{{
+              item.title
+            }}</el-radio
+            ><br />
+          </span>
+        </div>
+        <span slot="footer" class="dialog-footer">
+          <el-button v-loading="sending" type="primary" @click="confirmSendTask"
+            >确 定</el-button
+          >
         </span>
-      </div>
-      <span slot="footer" class="dialog-footer">
-        <el-button v-loading="sending" type="primary" @click="confirmSendTask"
-          >确 定</el-button
-        >
-      </span>
-    </el-dialog>
+      </el-dialog>
+    </div>
   </div>
 </template>
 
@@ -95,7 +93,8 @@ import {
   alltasks,
   sendTask,
   getRnningTask,
-  getLastFinishTask
+  getLastFinishTask,
+  computerlogout
 } from "@/api/func";
 
 export default {
@@ -107,7 +106,8 @@ export default {
     return {
       stsdatas: [],
 
-      runningtaskes: [],
+      runningtaskes: null,
+      runtaskper: 0,
       lastfinishtaskes: [],
 
       dialogVisible: false,
@@ -135,20 +135,21 @@ export default {
       let isready = true;
       for (let r of roles.data) {
         //存储为三个状态：0为未登录，1为用户登录，2为电脑登录
-        // console.log(tmpstatus[r.id])
         r.status = tmpstatus[r.id]
           ? tmpstatus[r.id].logintype == "userlogin"
             ? 1
             : 2
           : 0;
+        // r.status = tmpstatus[r.id] ? true : false;
+        r.logintype = r.status ? tmpstatus[r.id].logintype : "";
         datas.push(r);
         if (r.status == 0) {
           isready = false;
         }
       }
       this.isallready = isready;
+      console.log(this.isallready);
       this.stsdatas = datas;
-      // console.log(this.stsdatas)
     },
     async inittasks() {
       let tasks = await alltasks();
@@ -165,19 +166,25 @@ export default {
           .then(async () => {
             await computerlogin(item.id);
             this.$message({ type: "success", message: "操作成功!" });
-            item.status = 2;
+            item.status = true;
+            item.logintype = "computerlogin";
+            this.initTaskStatus();
+            this.initInfo();
           })
           .catch(() => {});
-      } else if (item.status == 2) {
-        this.$confirm("确认退出电脑代替该角色？", "提示", {
+      } else if (item.logintype == "computerlogin") {
+        this.$confirm("确定退出这个电脑角色？", "提示", {
           confirmButtonText: "确定",
           cancelButtonText: "取消",
           type: "warning"
         })
           .then(async () => {
-            // await computerlogin(item.id);
-            // this.$message({ type: "success", message: "操作成功!" });
-            // item.status = 2;
+            await computerlogout(item.id);
+            this.$message({ type: "success", message: "操作成功!" });
+            item.status = false;
+            item.logintype = "";
+            this.initTaskStatus();
+            this.initInfo();
           })
           .catch(() => {});
       }
@@ -185,9 +192,16 @@ export default {
     async initTaskStatus() {
       let obj = await getRnningTask();
       this.runningtaskes = obj.data;
+      if (this.runningtaskes) {
+        this.runtaskper = parseInt(
+          (this.runningtaskes.curstep / this.runningtaskes.tasksteps) * 100
+        );
+      }
+      console.log(this.runningtaskes);
       //////
-      let fobj = await getLastFinishTask();
-      this.lastfinishtaskes = fobj.data;
+      // let fobj = await getLastFinishTask();
+      // console.log(fobj);
+      //this.lastfinishtaskes = fobj.data;
     },
     showSendDialog() {
       this.dialogVisible = true;
