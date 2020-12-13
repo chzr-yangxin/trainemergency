@@ -12,7 +12,7 @@
       <span class="title">系统名称</span>
 
       <span class="dealtask" v-if="pritask">
-        <span>【{{ pritask.taskname }}】</span><br />
+        <span v-if="steps.length > 0">【{{ pritask.taskname }}】</span><br />
         <el-button-group>
           <el-button
             v-for="item in steps"
@@ -23,6 +23,7 @@
             @click="dealTask(item)"
             >{{ item.txt }}<em v-if="item.ismy">（点击接受任务）</em></el-button
           >
+          <!-- :disabled="!item.ismy" -->
         </el-button-group>
       </span>
 
@@ -45,7 +46,7 @@
           </el-select>
         </div> -->
 
-        {{ user.nickname }}
+        {{ user.nickname }}（{{ user.role.description }}）
         <a class="a-logout" @click="logout">[退出]</a>
       </div>
     </div>
@@ -55,10 +56,11 @@
 import { mapGetters } from "vuex";
 import Unity from "vue-unity-webgl";
 import { alltasks, getMyTask, scoreTask } from "@/api/func";
+import { GetTaskFunction } from "@/utils/taskfunc";
 
 export default {
   computed: {
-    ...mapGetters(["user"])
+    ...mapGetters(["user"]),
   },
   components: { Unity },
   data() {
@@ -67,14 +69,18 @@ export default {
       tasks: null,
       steps: null,
       pritask: null,
+      curscore: 100,
 
-      intervaltask: null
+      intervaltask: null,
+      isSetTaskType: false,
+
+      taskfuns: [],
+      tasktxts: [],
     };
   },
   mounted() {
     this.initUnity(() => {
       let role = this.user.role;
-      console.log(role);
       if (role) {
         this.$refs.unityvue.message(
           "MonoSingletionRoot",
@@ -86,62 +92,42 @@ export default {
     });
   },
   created() {
-    window["fraction"] = source => {
-      console.log(source);
-    };
-
-    window["DutyStation"] = msg => {
-      console.log(msg);
-      console.log(this.tasks)
-      if (msg == "人民广场站6号道岔挤岔报警") {
-        this.$refs.unityvue.message(
-          "MonoSingletionRoot",
-          "ReceiveTasks",
-          "道岔故障"
-        );
-        // this.$refs.unityvue.message(
-        //   "MonoSingletionRoot",
-        //   "ReceiveTasks",
-        //   "上报道岔故障行调"
-        // );
-        this.scoreTask(100)
-      } else if (msg == "请求单扳实验") {
-        this.$refs.unityvue.message(
-          "MonoSingletionRoot",
-          "ReceiveTasks",
-          "请求单扳实验"
-        );
-      } else if (msg == "道岔正常") {
-        console.log('over')
+    window["fraction"] = (source) => {
+      if (source < 0) {
+        this.curscore -= 10;
+        this.curscore = Math.max(0, this.curscore);
       }
     };
-    window["RoadWatchman"] = msg => {
-      console.log(msg);
-    };
-    window["PassengerWatchman"] = msg => {
-      console.log(msg);
-    };
-    window["StationHall"] = msg => {
-      console.log(msg);
-    };
     window["Over"] = () => {
+      console.log("完成了");
       //计分。或者重新开始
-    };
-
-    window.HandCap = txt => {
-      alert(txt);
-    };
-    window.BeatPhone = txt => {
-      //// 分数清零
-      alert("ok");
-      alert(txt);
     };
     window.inited = () => {
       // 初始化场景成功
       this.getMyTasks();
     };
+    window.onunload = () => {
+      alert('123123')
+    };
   },
   methods: {
+    initFuncs(taskid) {
+      let taskfs = GetTaskFunction(taskid);
+      this.taskfuns = taskfs.funcs;
+      this.tasktxts = taskfs.txts;
+
+      for (let d of this.taskfuns) {
+        window[d.func] = (msg) => {
+          console.log("接收到消息：" + msg);
+          for (let m of d.msgs) {
+            if (m.msg == msg) {
+              console.log(`第${m.step + 1}步完成--`);
+              this.scoreTask(this.curscore);
+            }
+          }
+        };
+      }
+    },
     initUnity(callback) {
       let int = setInterval(() => {
         if (this.$refs.unityvue.loaded) {
@@ -154,27 +140,25 @@ export default {
     },
     async getMyTasks() {
       this.intervaltask = setInterval(async () => {
-        if (!this.tasks) {
-          this.getMTask();
-        }
+        this.getMTask();
       }, 5000);
       this.getMTask();
     },
     async getMTask() {
       let obj = await getMyTask();
-      // console.log(obj)
-      // if (obj.data && obj.data.length > 0) {
-      //   this.tasks = obj.data[0];
-      //   this.sendTaskToUnity()
-      //   this.mytaskid = this.tasks.id
-      // } else {
-      //   this.tasks = null;
-      // console.log(obj);
+
       if (obj.data && obj.data.task) {
-        this.tasks = obj.data;
-        console.log("--------------------------")
-        console.log(obj.data)
-        this.mytaskid = this.tasks.id;
+        if (!this.isSetTaskType) {
+          this.initFuncs(obj.data.task.taskid);
+          if (obj.data.task.tasktype == "考核") {
+            this.$refs.unityvue.message(
+              "MonoSingletionRoot",
+              "Pattern",
+              "assess"
+            );
+          }
+          this.isSetTaskType = true;
+        }
 
         this.pritask = obj.data.task;
         let mysteps = obj.data.mysteps;
@@ -203,73 +187,48 @@ export default {
             curstep: this.pritask.curstep,
             txt: txt,
             tp: tp,
-            data: mobj
+            data: mobj,
           });
         }
         this.steps = allsteps;
-        console.log(this.steps)
+      } else {
+        if (this.isSetTaskType) {
+          this.$message({
+            type: "success",
+            message: "任务已结束！",
+            offset: 100,
+          });
+        }
+        this.isSetTaskType = false;
+        this.steps = [];
       }
-      // console.log(obj.data && obj.data.task)
-      // if (obj.data && obj.data.length > 0) {
-      //   this.tasks = obj.data[0];
-      //   this.sendTaskToUnity()
-      //   this.mytaskid = this.tasks.id
-      // } else {
-      //   this.tasks = null;
-      // }
-      // console.log(this.tasks)
     },
     dealTask(item) {
-      console.log(item);
-      // 接受任务
+      // 接受任务;
       if (item.data && item.curstep == item.step) {
         this.mytaskid = item.data.id;
-        console.log(this.mytaskid);
-        this.sendTaskToUnity();
+
+        var txts = this.tasktxts;
+        let v = txts[item.step];
+        console.log("执行任务：" + v);
+        this.$refs.unityvue.message("MonoSingletionRoot", "ReceiveTasks", v);
+        this.curscore = 100;
+      } else {
+        this.$message({
+          type: "warn",
+          message: "任务还未开始！",
+          offset: 100,
+        });
       }
-      // 测试
-      // this.mytaskid = '58cd1cff0d5745b92aa7fac479627fb6';
-      // this.pftest()
-    },
-    sendTest() {
-      // this.$refs.unityvue.message(
-      //   "MonoSingletionRoot",
-      //   "LoadScene",
-      //   "值班站长"
-      // );
-      console.log(this.$refs.unityvue);
-    },
-    sendTest2() {
-      // this.$refs.unityvue.message(
-      //   "MonoSingletionRoot",
-      //   "ATSReceive",
-      //   "尝试单扳实验"
-      // );
-    },
-    pftest() {
-      this.scoreTask(77);
     },
     async scoreTask(score) {
       await scoreTask(this.mytaskid, score);
       this.$message({
         type: "success",
         message: "分数成功提交，您的分数是：" + score,
-        offset: 100
+        offset: 100,
       });
       this.tasks = null;
-    },
-    //如何发送
-    async sendTaskToUnity() {
-      let task = this.tasks;
-      console.log(task);
-      let send;
-      if (task.task.taskname == "道岔故障（道岔挤岔报警）的应急处理") {
-        send = "道岔故障";
-      }
-      console.log(send);
-      if (task) {
-        this.$refs.unityvue.message("MonoSingletionRoot", "ReceiveTasks", send);
-      }
     },
     async logout() {
       if (this.intervaltask) {
@@ -277,8 +236,8 @@ export default {
       }
       await this.$store.dispatch("user/logout");
       this.$router.push(`/login?redirect=${this.$route.fullPath}`);
-    }
-  }
+    },
+  },
 };
 </script>
 <style lang="scss">

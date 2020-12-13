@@ -37,11 +37,11 @@ export function alltasks() {
     })
 }
 
-export function sendTask(taskid) {
+export function sendTask(taskid, tasktype) {
     return request({
         url: '/subway/sendtask/' + taskid,
         method: 'post',
-        params: { tasktype: '实训' }
+        params: { tasktype: tasktype }
     })
 }
 

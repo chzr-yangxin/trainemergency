@@ -13,17 +13,17 @@
         }}{{ item.logintype == "computerlogin" ? "（电脑）" : "" }}</el-button
       >
       <br /><br /><br />
-      <span style="margin-right:8px;"><span class="notlog"></span>未登录</span
+      <span style="margin-right: 8px"><span class="notlog"></span>未登录</span
       >&nbsp;
-      <span style="margin-right:8px;"
+      <span style="margin-right: 8px"
         ><span class="userlog"></span>用户登录</span
       >&nbsp;
       <span><span class="complog"></span>电脑登录</span>
       <br /><br /><br /><br /><br />
       <div v-if="!runningtaskes || runningtaskes.length <= 0">
-        <span v-if="isallready" style="margin-right:10px">
-          <el-radio v-model="radio" label="1">实训</el-radio>
-          <el-radio v-model="radio" label="2">考核</el-radio>
+        <span v-if="isallready" style="margin-right: 10px">
+          <el-radio v-model="radio" label="实训">实训</el-radio>
+          <el-radio v-model="radio" label="考核">考核</el-radio>
         </span>
         <div v-if="!runningtaskes">
           <el-button
@@ -94,13 +94,13 @@ import {
   sendTask,
   getRnningTask,
   getLastFinishTask,
-  computerlogout
+  computerlogout,
 } from "@/api/func";
 
 export default {
   name: "Dashboard",
   computed: {
-    ...mapGetters(["name"])
+    ...mapGetters(["name"]),
   },
   data() {
     return {
@@ -118,7 +118,7 @@ export default {
       isallready: false,
       intervalData: null,
 
-      radio: "1"
+      radio: "实训",
     };
   },
   methods: {
@@ -148,7 +148,6 @@ export default {
         }
       }
       this.isallready = isready;
-      console.log(this.isallready);
       this.stsdatas = datas;
     },
     async inittasks() {
@@ -161,7 +160,7 @@ export default {
         this.$confirm("确定以电脑代替该角色？", "提示", {
           confirmButtonText: "确定",
           cancelButtonText: "取消",
-          type: "warning"
+          type: "warning",
         })
           .then(async () => {
             await computerlogin(item.id);
@@ -176,7 +175,22 @@ export default {
         this.$confirm("确定退出这个电脑角色？", "提示", {
           confirmButtonText: "确定",
           cancelButtonText: "取消",
-          type: "warning"
+          type: "warning",
+        })
+          .then(async () => {
+            await computerlogout(item.id);
+            this.$message({ type: "success", message: "操作成功!" });
+            item.status = false;
+            item.logintype = "";
+            this.initTaskStatus();
+            this.initInfo();
+          })
+          .catch(() => {});
+      } else if (item.logintype == "userlogin") {
+        this.$confirm("确定退出这个角色？", "提示", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning",
         })
           .then(async () => {
             await computerlogout(item.id);
@@ -210,7 +224,7 @@ export default {
       if (this.choosetask) {
         // console.log(this.choosetask)
         this.sending = true;
-        await sendTask(this.choosetask);
+        await sendTask(this.choosetask, this.radio);
         this.sending = false;
         this.dialogVisible = false;
         //下发任务，传过去实训还是考核this.radio;
@@ -225,7 +239,7 @@ export default {
         return "success-row";
       }
       return "";
-    }
+    },
   },
   mounted() {
     this.initInfo();
@@ -245,7 +259,7 @@ export default {
     if (this.intervalData) {
       clearInterval(this.intervalData);
     }
-  }
+  },
 };
 </script>
 <style lang="scss">
