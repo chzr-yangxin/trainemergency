@@ -36,7 +36,7 @@
         </div>
       </div>
       <div class="curtask" v-if="runningtaskes">
-        <h3>正在执行的任务：《{{ runningtaskes.taskname }}》</h3>
+        <h3>正在执行的任务：《{{ runningtaskes.taskname }}》 <em class="del-link" @click="taskDelete(runningtaskes.id)">删除</em></h3>
         <el-progress
           :text-inside="true"
           :stroke-width="24"
@@ -95,6 +95,7 @@ import {
   getRnningTask,
   getLastFinishTask,
   computerlogout,
+  deleteTask
 } from "@/api/func";
 
 export default {
@@ -220,6 +221,10 @@ export default {
     showSendDialog() {
       this.dialogVisible = true;
     },
+    async taskDelete(id){
+      await deleteTask(id);
+      this.$message({ type: "success", message: "任务已被删除!" });
+    },
     async confirmSendTask() {
       if (this.choosetask) {
         // console.log(this.choosetask)
@@ -307,6 +312,10 @@ export default {
   width: 80%;
   margin: 0 auto;
   text-align: center;
+  .del-link{
+    color:#f60;margin-left:15px;
+    text-decoration: underline;
+  }
 }
 .oldtask {
   opacity: 0.66;

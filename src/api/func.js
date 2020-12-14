@@ -119,3 +119,10 @@ export function scoreTask(resid, score) {
         params: {score: score}
     })
 }
+
+export function deleteTask(resid) {
+    return request({
+        url: '/subway/deletetask/' + resid,
+        method: 'delete'
+    })
+}
