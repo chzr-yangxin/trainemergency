@@ -2,7 +2,7 @@
   <div class="dashboard-container">
     <h1>考核查询列表</h1>
     <div>
-      <el-table :data="tableData" border style="width: 100%">
+      <el-table :data="tableData" border style="width: 100%" v-loading="loadingdata">
         <el-table-column prop="ctime" label="时间"> </el-table-column>
         <el-table-column prop="checkname" label="考核内容"> </el-table-column>
         <el-table-column label="详情">
@@ -16,6 +16,9 @@
           </template>
         </el-table-column>
       </el-table>
+      <br/><br/>
+      <el-pagination @current-change="pagechange($event)" background layout="prev, pager, next" :total="totalcount" :page-size="pagesize">
+      </el-pagination>
     </div>
     <!-- -->
     <el-dialog
@@ -48,6 +51,8 @@ export default {
       tableData: [],
       pageindex: 1,
       pagesize: 10,
+      totalcount: 10,
+      loadingdata: false,
 
       tableDetailData: [],
       title: "",
@@ -72,6 +77,10 @@ export default {
       this.tableDetailData = stus.data;
       this.loadingdetial = false;
     },
+    pagechange(p){
+      this.pageindex = p;
+      this.initInfo();
+    }
   },
   mounted() {
     this.initInfo();

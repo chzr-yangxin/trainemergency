@@ -7,7 +7,7 @@
           >添加用户</el-button
         >
       </div>
-      <el-table :data="tableData" border style="width: 100%">
+      <el-table :data="tableData" border style="width: 100%" v-loading="loadingdata">
         <el-table-column prop="code" label="工号"> </el-table-column>
         <el-table-column prop="nickname" label="姓名"> </el-table-column>
         <el-table-column prop="sex" label="性别"> </el-table-column>
@@ -29,6 +29,10 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <br/><br/>
+      <el-pagination @current-change="pagechange($event)" background layout="prev, pager, next" :total="totalcount" :page-size="pagesize">
+      </el-pagination>
     </div>
     <!-- -->
     <el-dialog
@@ -96,6 +100,8 @@ export default {
       tableData: [],
       pageindex: 1,
       pagesize: 10,
+      totalcount: 10,
+      loadingdata: false,
 
       dialogVisible: false,
       isAddUser: false,
@@ -123,8 +129,11 @@ export default {
   },
   methods: {
     async initInfo() {
+      this.loadingdata = true;
       let obj = await allusers(this.pageindex, this.pagesize);
       this.tableData = obj.data.users;
+      this.totalcount = obj.data.total;
+      this.loadingdata = false;
     },
     async initOther() {
       let obj = await getRoles();
@@ -152,6 +161,11 @@ export default {
           return false;
         }
       });
+    },
+
+    pagechange(p){
+      this.pageindex = p;
+      this.initInfo();
     },
 
     reset() {

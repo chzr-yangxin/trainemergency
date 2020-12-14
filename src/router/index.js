@@ -62,7 +62,7 @@ export const constantRoutes = [
       path: 'status',
       name: 'status',
       component: () => import('@/views/status/index'),
-      meta: { title: '登录状态', icon: 'dashboard' }
+      meta: { title: '登录状态', icon: 'el-icon-s-order' }
     }]
   },
 
@@ -74,7 +74,7 @@ export const constantRoutes = [
       path: 'list',
       name: 'userlist',
       component: () => import('@/views/user/index'),
-      meta: { title: '用户列表', icon: 'dashboard' }
+      meta: { title: '用户列表', icon: 'el-icon-user-solid' }
     }]
   },
 
@@ -86,7 +86,7 @@ export const constantRoutes = [
       path: 'list',
       name: 'checklist',
       component: () => import('@/views/check/index'),
-      meta: { title: '考核列表', icon: 'dashboard' }
+      meta: { title: '考核列表', icon: 'el-icon-s-claim' }
     }]
   },
 

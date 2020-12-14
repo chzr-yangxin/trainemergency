@@ -43,7 +43,7 @@ module.exports = {
         changeOrigin: true
       },
       '/subway': {
-        target: 'http://localhost:19090',
+        target: 'http://192.168.31.164:19090',
         changeOrigin: true
       }
     }
