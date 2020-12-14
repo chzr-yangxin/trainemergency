@@ -9,7 +9,7 @@
       ref="unityvue"
     ></unity>
     <div class="my-buts">
-      <span class="title">系统名称</span>
+      <span class="title">轨道交通设备故障应急仿真系统</span>
 
       <span class="dealtask" v-if="pritask">
         <span v-if="steps.length > 0">【{{ pritask.taskname }}】</span><br />
@@ -121,6 +121,12 @@ export default {
           console.log("接收到消息：" + msg);
           for (let m of d.msgs) {
             if (m.msg == msg) {
+              if(msg == undefined) {
+                this.$refs.unityvue.message(
+                  "MonoSingletionRoot",
+                  "Ref"
+                );
+              }
               console.log(`第${m.step + 1}步完成--`);
               this.scoreTask(this.curscore);
             }

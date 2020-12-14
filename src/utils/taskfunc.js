@@ -19,6 +19,12 @@ export function GetTaskFunction(type) {
                 },
                 { func: "PassengerWatchman", msgs: [{ step: 3, msg: "设备故障" }] },
                 { func: "StationHall", msgs: [{ step: 4, msg: "道岔故障" }] },
+                {
+                    func: "Over",
+                    msgs: [
+                        { step: 7, msg: undefined }
+                    ],
+                }
             ],
             txts: [
                 "道岔故障",
@@ -28,6 +34,7 @@ export function GetTaskFunction(type) {
                 "道岔故障",
                 "道岔故障",
                 "道岔单操操作",
+                "道岔正常"
             ]
         },
         "8": {
